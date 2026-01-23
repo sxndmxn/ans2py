@@ -268,6 +268,10 @@ def apl_right_monadic(x: ArrayLike) -> np.ndarray:
     return ensure_array(x)
 
 
+# Alias for same/identity
+apl_same = apl_right_monadic
+
+
 # ============================================================
 # Comparison Functions
 # ============================================================
@@ -523,9 +527,15 @@ def apl_enclose(x: ArrayLike) -> np.ndarray:
 def apl_disclose(x: ArrayLike) -> np.ndarray:
     """disclose monadic: disclose/first"""
     arr = ensure_array(x)
-    if arr.dtype == object and len(arr) > 0:
-        return arr.flat[0]
-    return arr.flat[0] if arr.size > 0 else arr
+    if arr.dtype == object and arr.size > 0:
+        # Get first element along first axis
+        first = arr[0] if arr.ndim > 0 else arr.item()
+        if isinstance(first, np.ndarray):
+            return first
+        return np.array(first)
+    if arr.size > 0:
+        return np.array(arr.flat[0])
+    return arr
 
 
 def apl_first(x: ArrayLike):
@@ -633,21 +643,29 @@ def apl_reduce(fn: str, x: ArrayLike, axis: int = -1) -> np.ndarray:
     if arr.ndim <= 1:
         axis = None
 
+    # APL reduction is right-to-left: -/1 2 3 4 means 1-(2-(3-4)) = -2
+    def right_reduce(op, a):
+        """Right-to-left reduction (APL style)."""
+        if axis is not None:
+            # For multi-dim, apply along axis (NumPy default is left-to-right)
+            return np.apply_along_axis(lambda row: functools_reduce(lambda acc, x: op(x, acc), reversed(row)), axis, a)
+        return functools_reduce(lambda acc, x: op(x, acc), reversed(a.flatten()))
+
     reductions = {
         # ASCII names (preferred for generated code)
         'add': lambda a: np.sum(a, axis=axis),
-        'sub': lambda a: np.subtract.reduce(a, axis=axis) if axis is not None else functools_reduce(lambda x,y: x-y, a.flatten()),
+        'sub': lambda a: right_reduce(lambda x, y: x - y, a),
         'mul': lambda a: np.prod(a, axis=axis),
-        'div': lambda a: np.divide.reduce(a, axis=axis) if axis is not None else functools_reduce(lambda x,y: x/y, a.flatten()),
+        'div': lambda a: right_reduce(lambda x, y: x / y, a),
         'max': lambda a: np.max(a, axis=axis),
         'min': lambda a: np.min(a, axis=axis),
         'and': lambda a: np.all(a, axis=axis).astype(int),
         'or': lambda a: np.any(a, axis=axis).astype(int),
         # APL symbols (for backwards compatibility)
         '+': lambda a: np.sum(a, axis=axis),
-        '-': lambda a: np.subtract.reduce(a, axis=axis) if axis is not None else functools_reduce(lambda x,y: x-y, a.flatten()),
+        '-': lambda a: right_reduce(lambda x, y: x - y, a),
         'x': lambda a: np.prod(a, axis=axis),
-        '/': lambda a: np.divide.reduce(a, axis=axis) if axis is not None else functools_reduce(lambda x,y: x/y, a.flatten()),
+        '/': lambda a: right_reduce(lambda x, y: x / y, a),
         'max_sym': lambda a: np.max(a, axis=axis),
         'min_sym': lambda a: np.min(a, axis=axis),
     }
@@ -759,6 +777,7 @@ def apl_outer_product(fn: str, a: ArrayLike, b: ArrayLike) -> np.ndarray:
         'sub': np.subtract.outer, '-': np.subtract.outer,
         'mul': np.multiply.outer, 'x': np.multiply.outer,
         'div': np.divide.outer,
+        'mod': np.mod.outer, '|': np.mod.outer,  # residue/modulo
         'max': np.maximum.outer,
         'min': np.minimum.outer,
         'eq': lambda x, y: np.equal.outer(x, y).astype(int), '=': lambda x, y: np.equal.outer(x, y).astype(int),
@@ -927,7 +946,7 @@ __all__ = [
     'apl_iota', 'apl_shape', 'apl_ravel', 'apl_reverse', 'apl_reverse_first',
     'apl_transpose', 'apl_enclose', 'apl_disclose', 'apl_first',
     'apl_grade_up', 'apl_grade_down', 'apl_unique', 'apl_tally',
-    'apl_matrix_inverse', 'apl_left_monadic', 'apl_right_monadic',
+    'apl_matrix_inverse', 'apl_left_monadic', 'apl_right_monadic', 'apl_same',
     # Dyadic
     'apl_add', 'apl_subtract', 'apl_multiply', 'apl_divide',
     'apl_maximum', 'apl_minimum', 'apl_power', 'apl_log', 'apl_residue',
