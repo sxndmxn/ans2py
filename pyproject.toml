@@ -39,8 +39,8 @@ dev = [
 ans2py = "ans2py.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/user/ans2py"
-Issues = "https://github.com/user/ans2py/issues"
+Homepage = "https://github.com/sxndmxn/ans2py"
+Issues = "https://github.com/sxndmxn/ans2py/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

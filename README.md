@@ -11,6 +11,9 @@ Convert IBM APL2 `.ANS` workspace files and APL expressions to Python/NumPy code
 
 ## Installation
 
+Use Python 3.10 or newer.
+Run the installation command from the repository root inside a virtual environment.
+
 ```bash
 pip install -e .
 ```
